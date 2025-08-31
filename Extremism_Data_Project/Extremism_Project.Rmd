@@ -1,0 +1,79 @@
+---
+title: "Extremism_Project"
+output: html_document
+date: "2025-08-25"
+---
+
+```{R}
+#Install Packages
+install.packages("tidyverse")
+install.packages("readxl")
+
+library(dplyr)
+library(readxl)
+library(ggplot2)
+library(plotly)
+
+
+#Load Data
+df <- read_excel("C:/Users/mattp/OneDrive/Attachments/Documents/Extremism_Data_Project/PIRUS V5.xlsx")
+
+#Cleaning data
+df_clean <- df %>%
+  mutate(Nativity = gsub("United States of America", "United States", Nativity))
+  
+#Check change in Nationality of extremists
+df_nativity <- df_clean %>%
+  group_by(Nativity, Year_Exposure) %>%
+  summarise(count = n(), .groups = "drop")
+
+#Checks whether extremists are from the U.S. or not and change over time
+df_homegrown <- df_clean %>%
+  mutate(Homegrown = ifelse(Nativity == "United States", 1, 0)) %>%
+  group_by(Homegrown, Year_Exposure) %>%
+  summarise(count = n(), .groups = "drop")
+
+df_homegrown_targets <- df_clean %>%
+  mutate(Homegrown = ifelse(Nativity == "United States", 1, 0)) %>%
+  filter(Homegrown == 1) %>%
+  filter(!Plot_Target1 %in% c(-88, -99)) %>%
+  group_by(Plot_Target1, Year_Exposure)%>%
+  summarise(count = n(), .groups = "drop")
+  
+#static plot
+ggplot(data = df_homegrown_targets,
+       aes(x = Year_Exposure, y = count, fill = factor(Plot_Target1))) +
+  geom_col(position = "dodge") +
+  labs(
+    title = "Targets by Year",
+    x = "Year of Exposure",
+    y = "Count",
+    fill = "Target"
+  ) +
+  theme_minimal()
+
+#dynamic plot
+p <- ggplot(df_homegrown_targets,
+       aes(x = Year_Exposure, y = count, fill = factor(Plot_Target1),
+           text = paste("Target:", Plot_Target1,
+                        "<br>Year:", Year_Exposure,
+                        "<br>Count:", count))) +
+  geom_col(position = "dodge") +
+  scale_x_continuous(
+    breaks = seq(min(df_homegrown_targets$Year_Exposure, na.rm = TRUE),
+                 max(df_homegrown_targets$Year_Exposure, na.rm = TRUE),
+                 by = 5)   # every 5 years
+  ) +
+  labs(
+    title = "Nativity by Year of Exposure",
+    x = "Year of Exposure",
+    y = "Count",
+    fill = "Target"
+  ) +
+  theme_minimal()
+
+ggplotly(p, tooltip = "text")
+
+```
+
+## R Markdown
